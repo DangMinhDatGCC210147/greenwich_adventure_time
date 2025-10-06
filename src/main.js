@@ -1,4 +1,4 @@
-// Biến toàn cục (giữ nguyên như đã cung cấp)
+// Biến toàn cục
 let player, background, ground, groundCollider, playerShadow;
 let cursors;
 let cacti; // Nhóm để quản lý cây xương rồng
@@ -189,7 +189,7 @@ function resizeGame(scene, gameSize) {
   scoreText.setFontSize(32 * scaleBG);
 }
 
-// Cấu hình game (định nghĩa sau các scene)
+// Cấu hình game
 const config = {
   type: Phaser.AUTO,
   backgroundColor: '#000000',
@@ -206,7 +206,7 @@ const config = {
       debug: true
     }
   },
-  scene: [LoadingScene, GameScene] // Tham chiếu scene sau khi định nghĩa
+  scene: [LoadingScene, GameScene]
 };
 
 const game = new Phaser.Game(config);
