@@ -18,7 +18,7 @@ class FormScene extends Phaser.Scene {
     bg.setScale(scaleBG);
     bg.setDisplaySize(width, height + 100);
 
-    // Overlay đen mờ
+    // Overlay mờ
     this.add.rectangle(0, 0, width, height, 0x000000, 0.4)
       .setOrigin(0, 0)
       .setDepth(1);
@@ -27,19 +27,37 @@ class FormScene extends Phaser.Scene {
     const oldForm = document.getElementById('formContainer');
     if (oldForm) oldForm.remove();
 
-    // Tạo form container
+    // Container
     const formContainer = document.createElement('div');
     formContainer.id = 'formContainer';
     formContainer.className = 'game-form';
     document.body.appendChild(formContainer);
 
-    // Tiêu đề
+    // Header (tiêu đề + nút config)
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'form-header d-flex justify-content-center align-items-center position-relative w-100 mb-3';
+    formContainer.appendChild(headerDiv);
+
     const title = document.createElement('h4');
     title.innerText = 'YOUR INFORMATION';
-    title.className = 'form-title';
-    formContainer.appendChild(title);
+    title.className = 'form-title text-center flex-grow-1';
+    headerDiv.appendChild(title);
 
-    // Các ô input
+    // Nút config (icon bánh răng)
+    const configBtn = document.createElement('button');
+    configBtn.innerHTML = '<i class="bi bi-gear-fill"></i>';
+    configBtn.className = 'btn btn-sm btn-outline-secondary config-icon-btn';
+    headerDiv.appendChild(configBtn);
+
+    configBtn.addEventListener('click', () => {
+      formContainer.classList.add('fade-out');
+      setTimeout(() => {
+        formContainer.remove();
+        this.scene.start('ConfigScene');
+      }, 300);
+    });
+
+    // Input fields
     const fields = [
       { id: 'name', label: 'Your name', type: 'text', placeholder: 'Ex: Nguyen Van A' },
       { id: 'phone', label: 'Phone number', type: 'tel', placeholder: 'Ex: 0123456789' },
@@ -57,20 +75,19 @@ class FormScene extends Phaser.Scene {
       formContainer.appendChild(div);
     });
 
-    // Nút submit
+    // Nút Go
     const submitBtn = document.createElement('button');
     submitBtn.className = 'btn btn-primary w-100 start-btn';
     submitBtn.innerText = 'Go';
     formContainer.appendChild(submitBtn);
 
-    // Sự kiện click
-    submitBtn.addEventListener('click', () => {
+    // Sự kiện click Go
+    submitBtn.addEventListener('click', async () => {
       const name = document.getElementById('name').value.trim();
       const phone = document.getElementById('phone').value.trim();
       const className = document.getElementById('class').value.trim();
       const school = document.getElementById('school').value.trim();
 
-      // ✅ Regex kiểm tra số điện thoại (Việt Nam & quốc tế cơ bản)
       const phoneRegex = /^(?:\+84|0)(3|5|7|8|9)[0-9]{8}$/;
 
       if (!name || !phone || !className || !school) {
@@ -83,8 +100,39 @@ class FormScene extends Phaser.Scene {
         return;
       }
 
-      // ✅ Nếu hợp lệ -> lưu và qua màn tiếp theo
-      localStorage.setItem('playerInfo', JSON.stringify({ name, phone, className, school }));
+      // Lấy cấu hình webhook & sheet ID
+      const SHEET_ID = localStorage.getItem('sheetId');
+      const WEBHOOK_URL = localStorage.getItem('webhookUrl');
+
+      if (!SHEET_ID || !WEBHOOK_URL) {
+        alert('⚙️ Missing configuration! Please open settings (gear icon) first.');
+        return;
+      }
+
+      // Gửi dữ liệu tới Google Apps Script
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sheetId: SHEET_ID,
+            name,
+            phone,
+            className,
+            school
+          })
+        });
+
+        const result = await response.json();
+        console.log('Webhook response:', result);
+
+      } catch (err) {
+        console.error('Webhook error:', err);
+        alert('Failed to send data to Google Sheet.');
+        return;
+      }
+
+      // Chuyển sang màn LoadingScene
       formContainer.classList.add('fade-out');
       setTimeout(() => {
         formContainer.remove();
@@ -97,9 +145,7 @@ class FormScene extends Phaser.Scene {
     const formContainer = document.getElementById('formContainer');
     if (formContainer) formContainer.remove();
   }
-  
 }
-
 
 // =============================
 // ⚙️ Cấu hình Phaser
@@ -120,7 +166,7 @@ const config = {
       debug: false
     }
   },
-  scene: [FormScene, LoadingScene, GameScene, GameOverScene]
+  scene: [FormScene, LoadingScene, GameScene, GameOverScene, ConfigScene]
 };
 
 // ✅ Khởi tạo game
