@@ -24,9 +24,9 @@ const game = new Phaser.Game(config);
 
 // --- LOAD ASSETS ---
 function preload() {
-  this.load.image('background', '../assets/groundandbackground/bg.png');
-  this.load.image('ground', '../assets/groundandbackground/ground.png');
-  this.load.image('player', '../assets/player/player.png');
+  this.load.image('background', 'assets/groundandbackground/bg.png');
+  this.load.image('ground', 'assets/groundandbackground/ground.png');
+  this.load.image('player', 'assets/player/player.png');
 }
 
 // --- CREATE OBJECTS ---
