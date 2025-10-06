@@ -111,20 +111,31 @@ class FormScene extends Phaser.Scene {
 
       // Gửi dữ liệu tới Google Apps Script
       try {
-        const response = await fetch(WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch(
+        `https://cors-proxy.kadendang-forfigma.workers.dev/?url=${encodeURIComponent(WEBHOOK_URL)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sheetId: SHEET_ID,
             name,
             phone,
             className,
             school
-          })
-        });
+          }),
+        }
+      );
 
-        const result = await response.json();
-        console.log('Webhook response:', result);
+      const text = await response.text();
+      console.log('Raw webhook response:', text);
+
+      // Thử parse JSON nếu đúng định dạng
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch {
+        result = { result: "success" }; // fallback nếu không phải JSON
+      }
 
       } catch (err) {
         console.error('Webhook error:', err);
