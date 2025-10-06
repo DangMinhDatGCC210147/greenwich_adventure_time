@@ -3,7 +3,7 @@ let player, background, ground, groundCollider, playerShadow;
 let cursors;
 let cacti; // Nhóm để quản lý cây xương rồng
 let lastCactusTime = 0;
-let nextCactusInterval = Phaser.Math.Between(3000, 6000); // Spawn ngẫu nhiên 3–6s
+let nextCactusInterval = Phaser.Math.Between(3000, 8000); // Spawn ngẫu nhiên 3–8s
 let gameOver = false;
 let score = 0; // Biến điểm số
 let scoreText; // Văn bản hiển thị điểm
@@ -155,6 +155,20 @@ function spawnCactus(scene) {
   cactus.setScale(0.1); // Tỷ lệ tùy chỉnh
   cactus.setImmovable(true);
   cactus.body.allowGravity = false;
+
+   // Giảm kích thước collider xuống 80% chiều rộng và chiều cao
+  const colliderScale = 0.7; // 80% kích thước gốc
+  const originalWidth = cactus.body.width;
+  const originalHeight = cactus.body.height;
+  const newWidth = originalWidth * colliderScale;
+  const newHeight = originalHeight * colliderScale;
+  cactus.body.setSize(newWidth, newHeight);
+  
+  // Căn giữa collider
+  cactus.body.setOffset(
+    (originalWidth - newWidth) / 2,
+    (originalHeight - newHeight) / 2
+  );
 }
 
 // --- TỰ ĐỘNG ĐIỀU CHỈNH KÍCH THƯỚC ---
