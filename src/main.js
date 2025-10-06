@@ -1,209 +1,109 @@
-// Biến toàn cục
-let player, background, ground, groundCollider, playerShadow;
-let cursors;
-let cacti; // Nhóm để quản lý cây xương rồng
-let lastCactusTime = 0;
-let nextCactusInterval = Phaser.Math.Between(3000, 8000); // Spawn ngẫu nhiên 3–8s
-let gameOver = false;
-let score = 0; // Biến điểm số
-let scoreText; // Văn bản hiển thị điểm
-let lastScoreTime = 0; // Thời gian tăng điểm lần cuối
-
-// Tốc độ & độ khó
-let gameSpeed = 4.2; // Tốc độ ban đầu cho nền, mặt đất, cây xương rồng
-const scoreMilestones = [10, 50, 100, 150, 200, 500, 1000]; // Các mốc điểm để tăng tốc
-const speedIncrements = [0.5, 0.7, 1, 1.3, 1.6, 2.0, 3.0]; // Giá trị tăng tốc tương ứng
-
-// --- MAIN GAME SCENE ---
-class GameScene extends Phaser.Scene {
+class FormScene extends Phaser.Scene {
   constructor() {
-    super({ key: 'GameScene' });
+    super({ key: 'FormScene' });
   }
 
   preload() {
-    this.load.image('background', 'assets/groundandbackground/bg.png');
-    this.load.image('ground', 'assets/groundandbackground/ground.png');
-    this.load.image('player', 'assets/player/player.png');
-    this.load.image('cactus', 'assets/groundandbackground/cactus.png'); 
+    this.load.image('background2', 'assets/groundandbackground/imagebg1.png');
   }
 
   create() {
     const { width, height } = this.scale;
 
-    // Nền
-    background = this.add.tileSprite(0, -100, width, height + 100, 'background').setOrigin(0,0).setScrollFactor(0).setDepth(0);
+    // Background
+    const bg = this.add.image(width / 2, height / 2, 'background2')
+      .setOrigin(0.5)
+      .setDepth(0);
     const scaleBG = Math.max(width / 2796, height / 1290);
-    background.setDisplaySize(width, height + 100);
+    bg.setScale(scaleBG);
+    bg.setDisplaySize(width, height + 100);
 
-    // Mặt đất
-    const groundHeight = height * 0.1;
-    ground = this.add.tileSprite(0, height - groundHeight, width, groundHeight, 'ground').setOrigin(0,1).setScrollFactor(0).setDepth(1);
-    ground.setDisplaySize(width, groundHeight);
+    // Overlay đen mờ
+    this.add.rectangle(0, 0, width, height, 0x000000, 0.4)
+      .setOrigin(0, 0)
+      .setDepth(1);
 
-    // Va chạm mặt đất
-    groundCollider = this.add.rectangle(width / 2, height - groundHeight / 2, width, groundHeight);
-    this.physics.add.existing(groundCollider, true);
-    groundCollider.visible = false;
+    // Xóa form cũ nếu có
+    const oldForm = document.getElementById('formContainer');
+    if (oldForm) oldForm.remove();
 
-    // Nhân vật
-    player = this.physics.add.sprite(width * 0.2, height - groundHeight - 150, 'player').setCollideWorldBounds(true);
-    player.setScale(0.08 * scaleBG).setDepth(2);
+    // Tạo form container
+    const formContainer = document.createElement('div');
+    formContainer.id = 'formContainer';
+    formContainer.className = 'game-form';
+    document.body.appendChild(formContainer);
 
-    // Bóng
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0x000000, 0.3);
-    graphics.fillEllipse(30, 10, 60, 20);
-    graphics.generateTexture('shadow', 60, 20);
-    graphics.destroy();
+    // Tiêu đề
+    const title = document.createElement('h4');
+    title.innerText = 'YOUR INFORMATION';
+    title.className = 'form-title';
+    formContainer.appendChild(title);
 
-    playerShadow = this.add.image(player.x, player.y + player.height * player.scaleY / 2, 'shadow').setScale(scaleBG).setDepth(1);
+    // Các ô input
+    const fields = [
+      { id: 'name', label: 'Your name', type: 'text', placeholder: 'Ex: Nguyen Van A' },
+      { id: 'phone', label: 'Phone number', type: 'tel', placeholder: 'Ex: 0123456789' },
+      { id: 'class', label: 'Class', type: 'text', placeholder: 'Ex: 12A1' },
+      { id: 'school', label: 'School Name', type: 'text', placeholder: 'Ex: THPT Nguyen Viet Hong' }
+    ];
 
-    // Văn bản điểm số
-    scoreText = this.add.text(20, 20, 'Score: 0', {
-      fontSize: 64 * scaleBG,
-      fontFamily: 'Arial',
-      color: '#000000',
-      fontStyle: 'bold'
-    }).setDepth(3).setScrollFactor(0);
-
-    // Vật lý
-    this.physics.add.collider(player, groundCollider);
-
-    // Đầu vào
-    this.input.on('pointerdown', () => jump(player));
-    cursors = this.input.keyboard.createCursorKeys();
-
-    // Nhóm cây xương rồng
-    cacti = this.physics.add.group();
-    this.physics.add.collider(player, cacti, () => {
-      if (!gameOver) {
-        gameOver = true;
-        this.physics.pause(); // Tạm dừng vật lý
-        player.setTint(0xff0000); // Đánh dấu nhân vật khi chết
-        console.log("GAME OVER");
-      }
+    fields.forEach(field => {
+      const div = document.createElement('div');
+      div.className = 'mb-3';
+      div.innerHTML = `
+        <label for="${field.id}" class="form-label fw-semibold">${field.label}</label>
+        <input id="${field.id}" type="${field.type}" placeholder="${field.placeholder}" class="form-control" />
+      `;
+      formContainer.appendChild(div);
     });
 
-    // Tự động điều chỉnh kích thước
-    this.scale.on('resize', (gameSize) => resizeGame(this, gameSize));
-  }
+    // Nút submit
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'btn btn-primary w-100 start-btn';
+    submitBtn.innerText = 'Go';
+    formContainer.appendChild(submitBtn);
 
-  update(time, delta) {
-    if (gameOver) return;
+    // Sự kiện click
+    submitBtn.addEventListener('click', () => {
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const className = document.getElementById('class').value.trim();
+      const school = document.getElementById('school').value.trim();
 
-    // Tăng điểm mỗi 0.5s
-    if (time > lastScoreTime + 500) {
-      score += 1;
-      scoreText.setText('Score: ' + Math.floor(score));
-      lastScoreTime = time;
+      // ✅ Regex kiểm tra số điện thoại (Việt Nam & quốc tế cơ bản)
+      const phoneRegex = /^(?:\+84|0)(3|5|7|8|9)[0-9]{8}$/;
 
-      // Kiểm tra mốc điểm để tăng tốc
-      for (let i = 0; i < scoreMilestones.length; i++) {
-        if (score === scoreMilestones[i]) {
-          gameSpeed += speedIncrements[i];
-          console.log(`Điểm ${score}: Tăng tốc lên ${gameSpeed}`);
-        }
+      if (!name || !phone || !className || !school) {
+        alert('Please enter full information');
+        return;
       }
-    }
 
-    // Di chuyển nền/mặt đất/cây xương rồng dựa trên gameSpeed
-    background.tilePositionX += gameSpeed;
-    ground.tilePositionX += gameSpeed;
-    player.setVelocityX(0);
-
-    // Cập nhật bóng
-    if (player.body.touching.down) {
-      playerShadow.setVisible(true);
-      playerShadow.setPosition(player.x, player.y + player.height * player.scaleY / 2);
-    } else {
-      playerShadow.setVisible(false);
-    }
-
-    if (cursors && cursors.space.isDown) jump(player);
-
-    // Tạo cây xương rồng ngẫu nhiên
-    if (time > lastCactusTime + nextCactusInterval) {
-      spawnCactus(this);
-      lastCactusTime = time;
-      nextCactusInterval = Phaser.Math.Between(1000, 6000); // Spawn ngẫu nhiên 1–6s
-    }
-
-    // Di chuyển cây xương rồng theo tốc độ game
-    cacti.children.iterate((cactus) => {
-      if (!cactus) return;
-      cactus.x -= gameSpeed;
-      if (cactus.x < -cactus.width) {
-        cactus.destroy();
+      if (!phoneRegex.test(phone)) {
+        alert('Invalid phone number format! (Ex: 0912345678 or +84912345678)');
+        return;
       }
+
+      // ✅ Nếu hợp lệ -> lưu và qua màn tiếp theo
+      localStorage.setItem('playerInfo', JSON.stringify({ name, phone, className, school }));
+      formContainer.classList.add('fade-out');
+      setTimeout(() => {
+        formContainer.remove();
+        this.scene.start('LoadingScene');
+      }, 400);
     });
   }
-}
 
-// --- HÀM NHẢY ---
-function jump(player) {
-  if (player.body.touching.down) {
-    player.setVelocityY(-500);
+  shutdown() {
+    const formContainer = document.getElementById('formContainer');
+    if (formContainer) formContainer.remove();
   }
-}
-
-// --- TẠO CÂY XƯƠNG RỒNG ---
-function spawnCactus(scene) {
-  const { width, height } = scene.scale;
-  const groundHeight = height * 0.1;
-  const cactus = cacti.create(width + 50, height - groundHeight, 'cactus'); // Spawn bên phải
-  cactus.setOrigin(0.5, 1); // Đáy cây chạm mặt đất
-  cactus.setScale(0.1); // Tỷ lệ tùy chỉnh
-  cactus.setImmovable(true);
-  cactus.body.allowGravity = false;
-
-   // Giảm kích thước collider xuống 80% chiều rộng và chiều cao
-  const colliderScale = 0.7; // 80% kích thước gốc
-  const originalWidth = cactus.body.width;
-  const originalHeight = cactus.body.height;
-  const newWidth = originalWidth * colliderScale;
-  const newHeight = originalHeight * colliderScale;
-  cactus.body.setSize(newWidth, newHeight);
   
-  // Căn giữa collider
-  cactus.body.setOffset(
-    (originalWidth - newWidth) / 2,
-    (originalHeight - newHeight) / 2
-  );
 }
 
-// --- TỰ ĐỘNG ĐIỀU CHỈNH KÍCH THƯỚC ---
-function resizeGame(scene, gameSize) {
-  const width = gameSize.width;
-  const height = gameSize.height;
-  const scaleBG = Math.max(width / 2796, height / 1290);
-  const groundHeight = height * 0.1;
 
-  // Nền
-  background.setDisplaySize(width, height + 100).setPosition(0, -100);
-
-  // Mặt đất
-  ground.setDisplaySize(width, groundHeight).setPosition(0, height - groundHeight);
-
-  // Va chạm
-  groundCollider.setSize(width, groundHeight);
-  groundCollider.setPosition(width / 2, height - groundHeight / 2);
-  if (groundCollider.body) {
-    groundCollider.body.setSize(width, groundHeight);
-    groundCollider.body.updateFromGameObject();
-  }
-
-  // Nhân vật & Bóng
-  player.setPosition(width * 0.2, height - groundHeight - 150);
-  player.setScale(0.08 * scaleBG);
-  playerShadow.setScale(scaleBG);
-  playerShadow.setPosition(player.x, player.y + player.height * player.scaleY / 2);
-
-  // Văn bản điểm số
-  scoreText.setPosition(20, 20);
-  scoreText.setFontSize(32 * scaleBG);
-}
-
-// Cấu hình game
+// =============================
+// ⚙️ Cấu hình Phaser
+// =============================
 const config = {
   type: Phaser.AUTO,
   backgroundColor: '#000000',
@@ -217,10 +117,11 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 900 },
-      debug: true
+      debug: false
     }
   },
-  scene: [LoadingScene, GameScene]
+  scene: [FormScene, LoadingScene, GameScene, GameOverScene]
 };
 
+// ✅ Khởi tạo game
 const game = new Phaser.Game(config);

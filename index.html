@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Endless Runner - Phaser 3</title>
 
-  <!-- Phaser 3 CDN -->
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Phaser 3 -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
   <style>
+    /* --- RESET / LAYOUT --- */
     body {
       margin: 0;
       padding: 0;
@@ -18,16 +22,134 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      font-family: "Inter", system-ui, sans-serif;
     }
+
     canvas {
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
       touch-action: none;
     }
+
+    /* --- FORM STYLE --- */
+    .game-form {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      padding: clamp(16px, 3vw, 28px);
+      width: clamp(300px, 80vw, 420px);
+      z-index: 10;
+      animation: fadeIn 0.6s ease forwards;
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+      max-height: 90vh; /* Giới hạn chiều cao để không tràn màn hình */
+    }
+
+    /* Khi form fade-out */
+    .game-form.fade-out {
+      animation: fadeOut 0.4s ease forwards;
+    }
+
+    /* Thanh cuộn nhẹ nhàng */
+    .game-form::-webkit-scrollbar {
+      width: 6px;
+    }
+    .game-form::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+    }
+
+    /* Tiêu đề */
+    .form-title {
+      text-align: center;
+      color: #007bff;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+    }
+
+    /* Input */
+    .game-form input.form-control {
+      border-radius: 8px;
+      font-size: clamp(14px, 1.8vw, 16px);
+      padding: 10px 12px;
+    }
+
+    .game-form input:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    /* Button */
+    .start-btn {
+      font-weight: 600;
+      font-size: clamp(16px, 2vw, 18px);
+      padding: 10px;
+      border-radius: 10px;
+      transition: all 0.25s ease;
+    }
+
+    .start-btn:hover {
+      background-color: #0056d2;
+      transform: translateY(-2px);
+    }
+
+    /* --- ANIMATION --- */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -60%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translate(-50%, -50%); }
+      to { opacity: 0; transform: translate(-50%, -40%); }
+    }
+
+    /* --- RESPONSIVE --- */
+    @media (max-width: 768px) {
+      .game-form {
+        width: 90%;
+        padding: 20px;
+        max-height: 90vh;
+      }
+    }
+
+    @media (orientation: landscape) {
+      .game-form {
+        width: 60%;
+        max-width: 600px;
+        padding: clamp(10px, 2vw, 20px);
+        max-height: 80vh; /* ⚡ Chiều cao nhỏ hơn để không chạm mép khi quay ngang */
+      }
+
+      .game-form input {
+        font-size: 0.95rem;
+      }
+
+      .start-btn {
+        font-size: 1rem;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      .game-form {
+        transform: translate(-50%, -45%);
+      }
+    }
   </style>
 </head>
+
 <body>
-      <script src="/src/loading.js"></script>
-      <script type="module" src="/src/main.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Game scripts -->
+  <script src="./src/loading.js"></script>
+  <script src="./src/gameover.js"></script>
+  <script src="./src/maingame.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
