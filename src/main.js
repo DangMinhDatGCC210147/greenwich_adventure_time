@@ -4,6 +4,14 @@ let cacti; // group để quản lý cactus
 let lastCactusTime = 0;
 let nextCactusInterval = Phaser.Math.Between(3000, 6000); // spawn ngẫu nhiên 3–6s
 let gameOver = false;
+let score = 0; // biến điểm số
+let scoreText; // text hiển thị điểm
+let lastScoreTime = 0; // thời gian lần cuối tăng điểm
+
+// --- SPEED & DIFFICULTY ---
+let gameSpeed = 4.5; // tốc độ nền, ground, cactus ban đầu
+const scoreMilestones = [10, 50, 100, 150, 200]; // các mốc điểm để tăng tốc
+const speedIncrements = [0.5, 0.7, 0.9, 1.1, 1.3]; // giá trị tăng tốc tương ứng
 
 const config = {
   type: Phaser.AUTO,
@@ -66,6 +74,14 @@ function create() {
 
   playerShadow = this.add.image(player.x, player.y + player.height * player.scaleY / 2, 'shadow').setScale(scaleBG).setDepth(1);
 
+  // Score Text
+  scoreText = this.add.text(20, 20, 'Score: 0', {
+    fontSize: 64 * scaleBG,
+    fontFamily: 'Arial',
+    color: '#000000',
+    fontStyle: 'bold'
+  }).setDepth(3).setScrollFactor(0);
+
   // Physics
   this.physics.add.collider(player, groundCollider);
 
@@ -98,9 +114,25 @@ function jump(player) {
 // --- UPDATE LOOP ---
 function update(time, delta) {
   if (gameOver) return;
-  
-  background.tilePositionX += 4;
-  ground.tilePositionX += 4;
+
+  // Tăng điểm mỗi 0.5s
+  if (time > lastScoreTime + 500) {
+    score += 1;
+    scoreText.setText('Score: ' + Math.floor(score));
+    lastScoreTime = time;
+
+    // Kiểm tra mốc điểm để tăng tốc độ
+    for (let i = 0; i < scoreMilestones.length; i++) {
+      if (score === scoreMilestones[i]) {
+        gameSpeed += speedIncrements[i];
+        console.log(`Score ${score}: Tăng tốc độ lên ${gameSpeed}`);
+      }
+    }
+  }
+
+  // Di chuyển background/ground/cactus theo gameSpeed
+  background.tilePositionX += gameSpeed;
+  ground.tilePositionX += gameSpeed;
   player.setVelocityX(0);
 
   // Update shadow
@@ -113,19 +145,19 @@ function update(time, delta) {
 
   if (cursors && cursors.space.isDown) jump(player);
 
-  // Spawn cactus ngẫu nhiên 3–6s
+  // Spawn cactus ngẫu nhiên
   if (time > lastCactusTime + nextCactusInterval) {
     spawnCactus(this);
     lastCactusTime = time;
-    nextCactusInterval = Phaser.Math.Between(3000, 6000);
+    nextCactusInterval = Phaser.Math.Between(1000, 6000); // spawn ngẫu nhiên 1–6s
   }
 
-  // Di chuyển cactus cùng tốc độ background/ground
+  // Di chuyển cactus theo tốc độ game
   cacti.children.iterate((cactus) => {
-    if (!cactus) return; // 👈 check null
-      cactus.x -= 4; // tốc độ trượt giống ground
+    if (!cactus) return;
+    cactus.x -= gameSpeed;
     if (cactus.x < -cactus.width) {
-      cactus.destroy(); // xóa cactus khi ra khỏi màn hình
+      cactus.destroy();
     }
   });
 }
@@ -167,4 +199,8 @@ function resizeGame(scene, gameSize) {
   player.setScale(0.08 * scaleBG);
   playerShadow.setScale(scaleBG);
   playerShadow.setPosition(player.x, player.y + player.height * player.scaleY / 2);
+
+  // Score Text
+  scoreText.setPosition(20, 20);
+  scoreText.setFontSize(32 * scaleBG);
 }
