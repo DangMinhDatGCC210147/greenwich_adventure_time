@@ -10,18 +10,61 @@ class FormScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    // Background
-    const bg = this.add.image(width / 2, height / 2, 'background2')
+    // ===== background (lưu trên this) =====
+    this.bg = this.add.image(0, 0, 'background2')
       .setOrigin(0.5)
-      .setDepth(0);
-    const scaleBG = Math.max(width / 2796, height / 1290);
-    bg.setScale(scaleBG);
-    bg.setDisplaySize(width, height + 100);
+      .setDepth(0)
+      .setScrollFactor(0);
 
-    // Overlay mờ
-    this.add.rectangle(0, 0, width, height, 0x000000, 0.4)
-      .setOrigin(0, 0)
-      .setDepth(1);
+    // bindable resize function for bg (so we can .off later)
+    this._resizeBg = () => {
+      if (!this.bg || this.bg.destroyed) return;
+      const scaleX = this.scale.width / this.bg.width;
+      const scaleY = this.scale.height / this.bg.height;
+      const scale = Math.max(scaleX, scaleY); // "cover"
+      this.bg.setScale(scale);
+      this.bg.setPosition(this.scale.width / 2, this.scale.height / 2);
+    };
+
+    // initial resize + register
+    this._resizeBg();
+    this.scale.on('resize', this._resizeBg);
+
+    // ===== overlay (lưu trên this) =====
+    this.overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.4)
+      .setOrigin(0)
+      .setDepth(1)
+      .setScrollFactor(0);
+
+    // unified resize handler that is safe (checks existence)
+    this._onResize = (gameSize) => {
+      const w = gameSize?.width || this.scale.width;
+      const h = gameSize?.height || this.scale.height;
+
+      if (this.overlay && !this.overlay.destroyed) {
+        // setSize exists on Rectangle game object
+        this.overlay.setSize(w, h);
+      }
+
+      // also keep background updated
+      if (this.bg && !this.bg.destroyed) {
+        this._resizeBg();
+      }
+    };
+
+    // register
+    this.scale.on('resize', this._onResize);
+
+    // clean up when scene shutdown/destroy
+    this.events.once('shutdown', this.shutdown, this);
+    this.events.once('destroy', this.shutdown, this);
+
+    // create the DOM form
+    this.createForm();
+  }
+
+  createForm() {
+    const { width, height } = this.scale;
 
     // Xóa form cũ nếu có
     const oldForm = document.getElementById('formContainer');
@@ -33,7 +76,7 @@ class FormScene extends Phaser.Scene {
     formContainer.className = 'game-form';
     document.body.appendChild(formContainer);
 
-    // Header (tiêu đề + nút config)
+    // Header
     const headerDiv = document.createElement('div');
     headerDiv.className = 'form-header d-flex justify-content-center align-items-center position-relative w-100 mb-3';
     formContainer.appendChild(headerDiv);
@@ -43,7 +86,7 @@ class FormScene extends Phaser.Scene {
     title.className = 'form-title text-center flex-grow-1';
     headerDiv.appendChild(title);
 
-    // Nút config (icon bánh răng)
+    // Config button
     const configBtn = document.createElement('button');
     configBtn.innerHTML = '<i class="bi bi-gear-fill"></i>';
     configBtn.className = 'btn btn-sm btn-outline-secondary config-icon-btn';
@@ -75,13 +118,13 @@ class FormScene extends Phaser.Scene {
       formContainer.appendChild(div);
     });
 
-    // Nút Go
+    // Go button
     const submitBtn = document.createElement('button');
     submitBtn.className = 'btn btn-primary w-100 start-btn';
     submitBtn.innerText = 'Go';
     formContainer.appendChild(submitBtn);
 
-    // Sự kiện click Go
+    // Submit event (unchanged)
     submitBtn.addEventListener('click', async () => {
       const name = document.getElementById('name').value.trim();
       const phone = document.getElementById('phone').value.trim();
@@ -100,7 +143,6 @@ class FormScene extends Phaser.Scene {
         return;
       }
 
-      // Lấy cấu hình webhook & sheet ID
       const SHEET_ID = localStorage.getItem('sheetId');
       const WEBHOOK_URL = localStorage.getItem('webhookUrl');
 
@@ -109,33 +151,31 @@ class FormScene extends Phaser.Scene {
         return;
       }
 
-      // Gửi dữ liệu tới Google Apps Script
       try {
         const response = await fetch(
-        `https://cors-proxy.kadendang-forfigma.workers.dev/?url=${encodeURIComponent(WEBHOOK_URL)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sheetId: SHEET_ID,
-            name,
-            phone,
-            className,
-            school
-          }),
+          `https://cors-proxy.kadendang-forfigma.workers.dev/?url=${encodeURIComponent(WEBHOOK_URL)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sheetId: SHEET_ID,
+              name,
+              phone,
+              className,
+              school
+            }),
+          }
+        );
+
+        const text = await response.text();
+        console.log('Raw webhook response:', text);
+
+        let result;
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = { result: "success" };
         }
-      );
-
-      const text = await response.text();
-      console.log('Raw webhook response:', text);
-
-      // Thử parse JSON nếu đúng định dạng
-      let result;
-      try {
-        result = JSON.parse(text);
-      } catch {
-        result = { result: "success" }; // fallback nếu không phải JSON
-      }
 
       } catch (err) {
         console.error('Webhook error:', err);
@@ -143,7 +183,7 @@ class FormScene extends Phaser.Scene {
         return;
       }
 
-      // Chuyển sang màn LoadingScene
+      // Transition to LoadingScene
       formContainer.classList.add('fade-out');
       setTimeout(() => {
         formContainer.remove();
@@ -153,19 +193,40 @@ class FormScene extends Phaser.Scene {
   }
 
   shutdown() {
+    // Xóa DOM
     const formContainer = document.getElementById('formContainer');
     if (formContainer) formContainer.remove();
+
+    // Gỡ listeners resize
+    if (this._onResize) {
+      this.scale.off('resize', this._onResize);
+      this._onResize = null;
+    }
+    if (this._resizeBg) {
+      this.scale.off('resize', this._resizeBg);
+      this._resizeBg = null;
+    }
+
+    // Hủy overlay và bg
+    if (this.overlay && !this.overlay.destroyed) {
+      this.overlay.destroy();
+      this.overlay = null;
+    }
+    if (this.bg && !this.bg.destroyed) {
+      this.bg.destroy();
+      this.bg = null;
+    }
   }
 }
 
 // =============================
-// ⚙️ Cấu hình Phaser
+// ⚙️ Phaser Configuration
 // =============================
 const config = {
   type: Phaser.AUTO,
   backgroundColor: '#000000',
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.RESIZE, // cho phép resize động
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: 2796,
     height: 1290,
@@ -180,5 +241,5 @@ const config = {
   scene: [FormScene, LoadingScene, GameScene, GameOverScene, ConfigScene]
 };
 
-// ✅ Khởi tạo game
+// ✅ Start the game
 const game = new Phaser.Game(config);
