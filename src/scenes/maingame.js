@@ -10,6 +10,17 @@ let lastScoreTime = 0;
 let gameSpeed = 4.2;
 let currentBgKey = null;
 
+const difficultyLevels = [
+    { score: 0,   speed: 4.2 },
+    { score: 25,  speed: 5.0 },
+    { score: 35,  speed: 5.8 },
+    { score: 50,  speed: 6.5 },
+    { score: 60,  speed: 7.6 },
+    { score: 100, speed: 8.5 },
+    { score: 115, speed: 9.5 },
+    { score: 130, speed: 11.0 },
+];
+
 class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
@@ -172,36 +183,46 @@ class GameScene extends Phaser.Scene {
     handleResize(gameSize) {
         const { width, height } = gameSize;
 
-        // Chọn ảnh nền phù hợp
+        // Chọn ảnh nền phù hợp theo width
         const newBgKey = this.getBackgroundKey(width);
         if (currentBgKey !== newBgKey) {
             background.setTexture(newBgKey);
             currentBgKey = newBgKey;
         }
 
-        // Fit chiều cao, giữ nguyên tỉ lệ
+        // ✅ Scale theo chiều rộng, giữ tỉ lệ gốc, căn giữa theo chiều dọc
         const texture = this.textures.get(currentBgKey).getSourceImage();
-        const scale = height / texture.height;
-        const targetWidth = texture.width * scale;
-        background.setDisplaySize(targetWidth, height).setPosition(width / 2, height / 2);
+        const scale = width / texture.width;  // scale cố định theo chiều rộng
+        const displayHeight = texture.height * scale;
 
-        // Cập nhật ground
+        background
+            .setDisplaySize(width, displayHeight)
+            .setOrigin(0.5, 1)
+            .setPosition(width / 2, height * 1.12);
+
+        // 🟫 Ground và collider luôn nằm sát đáy
         const groundHeight = height * 0.1;
         ground.setPosition(0, height).setDisplaySize(width, groundHeight);
 
-        // Collider nằm sát đáy
-        groundCollider.setPosition(width / 2, height - groundHeight / 2).setSize(width, groundHeight);
+        groundCollider
+            .setPosition(width / 2, height - groundHeight / 2)
+            .setSize(width, groundHeight);
 
-        // Player luôn nằm đúng trên ground
+        // 🧍‍♂️ Player đặt ngay trên ground
         player.setY(height - groundHeight - 150);
     }
 
     adjustSpeedByScore(score) {
-        if (score >= 100) gameSpeed = 8.0;
-        else if (score >= 60) gameSpeed = 7.2;
-        else if (score >= 50) gameSpeed = 6.5;
-        else if (score >= 35) gameSpeed = 5.8;
-        else if (score >= 25) gameSpeed = 5.0;
+        // Tìm level cao nhất phù hợp với điểm hiện tại
+        const level = difficultyLevels
+            .slice() // sao chép mảng để tránh mutate
+            .reverse()
+            .find(l => score >= l.score);
+
+        if (level && gameSpeed !== level.speed) {
+            gameSpeed = level.speed;
+            console.log(`Level up! Score: ${score}, Speed: ${gameSpeed}`);
+        }
     }
 
     spawnCactus() {
