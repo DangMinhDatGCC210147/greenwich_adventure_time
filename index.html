@@ -2,156 +2,132 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Endless Runner - Phaser 3</title>
 
-  <!-- Bootstrap 5 -->
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-
-  <!-- Phaser 3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
   <style>
-    /* --- RESET / LAYOUT --- */
     body {
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0; overflow: hidden;
       background: #000;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: flex; justify-content: center; align-items: center;
       height: 100vh;
-      font-family: "Inter", system-ui, sans-serif;
+      font-family: "Inter", sans-serif;
     }
-
     canvas {
       border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-      touch-action: none;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
-
-    /* --- FORM STYLE --- */
     .game-form {
-      position: absolute;
-      top: 50%;
-      left: 50%;
+      position: fixed; /* cố định trong viewport, thay vì absolute */
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(255, 255, 255, 0.92);
+      background: rgba(255,255,255,0.95);
       border-radius: 16px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-      padding: clamp(16px, 3vw, 28px);
+      padding: 24px;
       width: clamp(300px, 80vw, 420px);
-      z-index: 10;
+      max-height: 90vh; /* 🔹 giới hạn chiều cao tối đa của form */
+      overflow-y: auto; /* 🔹 cho phép cuộn dọc nếu form quá cao */
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
       animation: fadeIn 0.6s ease forwards;
-      backdrop-filter: blur(10px);
-      overflow-y: auto;
-      max-height: 90vh; /* Giới hạn chiều cao để không tràn màn hình */
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      scrollbar-width: thin;
+      scrollbar-color: #007bff #e9ecef;
     }
 
-    /* Khi form fade-out */
-    .game-form.fade-out {
-      animation: fadeOut 0.4s ease forwards;
-    }
+  /* Thanh cuộn tuỳ chỉnh (hiển thị đẹp trên Chrome) */
+  .game-form::-webkit-scrollbar {
+    width: 8px;
+  }
+  .game-form::-webkit-scrollbar-thumb {
+    background: linear-gradient(45deg, #007bff, #00c6ff);
+    border-radius: 10px;
+  }
+  .game-form::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
 
-    /* Thanh cuộn nhẹ nhàng */
-    .game-form::-webkit-scrollbar {
-      width: 6px;
-    }
-    .game-form::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 10px;
-    }
+  /* Giữ hiệu ứng focus và hover như trước */
+  .game-form input:focus,
+  .game-form textarea:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    border-color: #007bff;
+  }
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
 
-    /* Tiêu đề */
-    .form-title {
-      text-align: center;
-      color: #007bff;
-      font-weight: 700;
-      margin-bottom: 1.2rem;
+    .game-form {
+      backdrop-filter: blur(8px);
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
     }
-
-    /* Input */
-    .game-form input.form-control {
-      border-radius: 8px;
-      font-size: clamp(14px, 1.8vw, 16px);
-      padding: 10px 12px;
-    }
-
-    .game-form input:focus {
+    .game-form input:focus, .game-form textarea:focus {
+      box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
       border-color: #007bff;
-      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
 
-    /* Button */
-    .start-btn {
-      font-weight: 600;
-      font-size: clamp(16px, 2vw, 18px);
-      padding: 10px;
-      border-radius: 10px;
-      transition: all 0.25s ease;
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
-    .start-btn:hover {
-      background-color: #0056d2;
-      transform: translateY(-2px);
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; transform: scale(0.98); } }
+    .fade-out { animation: fadeOut 0.4s ease forwards; }
+
+    @keyframes barFlow {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 200% 0%; }
     }
 
-    /* --- ANIMATION --- */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translate(-50%, -60%); }
-      to { opacity: 1; transform: translate(-50%, -50%); }
+    /* Dấu chấm nhấp nháy */
+    .dots::after {
+      content: "";
+      animation: dotsAnim 1.5s infinite steps(3, end);
     }
 
-    @keyframes fadeOut {
-      from { opacity: 1; transform: translate(-50%, -50%); }
-      to { opacity: 0; transform: translate(-50%, -40%); }
+    @keyframes dotsAnim {
+      0% { content: ""; }
+      33% { content: "."; }
+      66% { content: ".."; }
+      100% { content: "..."; }
     }
 
-    /* --- RESPONSIVE --- */
-    @media (max-width: 768px) {
-      .game-form {
-        width: 90%;
-        padding: 20px;
-        max-height: 90vh;
+    .fade-out { animation: fadeOut 0.4s ease forwards; }
+      @keyframes fadeIn { from { opacity:0; } to { opacity:0.95; } }
+      @keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+
+      @media (max-height: 600px) {
+        .game-form {
+          top: 5%;
+          transform: translateX(-50%);
+        }
       }
-    }
-
-    @media (orientation: landscape) {
-      .game-form {
-        width: 60%;
-        max-width: 600px;
-        padding: clamp(10px, 2vw, 20px);
-        max-height: 80vh; /* ⚡ Chiều cao nhỏ hơn để không chạm mép khi quay ngang */
-      }
-
-      .game-form input {
-        font-size: 0.95rem;
-      }
-
-      .start-btn {
-        font-size: 1rem;
-      }
-    }
-
-    @media (orientation: landscape) and (max-height: 500px) {
-      .game-form {
-        transform: translate(-50%, -45%);
-      }
-    }
+    
   </style>
 </head>
 
 <body>
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Game scripts -->
-  <script src="./src/configscene.js"></script>
-  <script src="./src/loading.js"></script>
-  <script src="./src/gameover.js"></script>
-  <script src="./src/maingame.js"></script>
-  <script type="module" src="./src/main.js"></script>
+  <!-- Load all scenes -->
+  <script src="./src/scenes/formscene.js"></script>
+  <script src="./src/scenes/configscene.js"></script>
+  <script src="./src/scenes/loading.js"></script>
+  <script src="./src/scenes/gameover.js"></script>
+  <script src="./src/scenes/maingame.js"></script>
+  <script src="./src/main.js"></script>
 </body>
 </html>
